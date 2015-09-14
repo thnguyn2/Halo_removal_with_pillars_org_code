@@ -66,16 +66,18 @@ function [gk,tk,tk0] = estimate_gt(gamma,h,niter,lambda,beta_weight,tol,method,b
         %Make sure that our phase is not offsett
         gamma_phase = angle(tk);
         gamma_phase = gamma_phase - mean(mean(gamma_phase(bg.bgyy1:bg.bgyy2,bg.bgxx1:bg.bgxx2)));
+        gamma_phase = gamma_phase.*(gamma_phase>=0); %Enfore non-negative contrainst for the phase.
         tk = abs(tk).*exp(i*gamma_phase);
-        figure(4);
-        subplot(1,3,1);imagesc(angle(tk));colorbar;title(sprintf('Current estimation tk - iter #%d',iter));
-        subplot(1,3,2);imagesc(angle(gk));colorbar;title(sprintf('Current estimation -gk iter #%d',iter));
-        subplot(1,3,3);imagesc(angle(gamma));colorbar;title(sprintf('Original arg(gamma) iter #%d',iter));
-      
-        colormap jet
-        figure(3);
-        plot(angle(tk(1200,:)));drawnow
-        
+        if (mod(iter,100)==1)
+            figure(4);
+            subplot(1,3,1);imagesc(angle(tk));colorbar;colormap gray;title(sprintf('Current estimation tk - iter #%d',iter));
+            subplot(1,3,2);imagesc(angle(gk));colormap gray;colorbar;title(sprintf('Current estimation -gk iter #%d',iter));
+            subplot(1,3,3);imagesc(angle(gamma));colormap gray;colorbar;title(sprintf('Original arg(gamma) iter #%d',iter));
+
+            colormap gray
+            figure(3);
+            plot(angle(tk(1200,:)));drawnow
+        end
 
     end
     
