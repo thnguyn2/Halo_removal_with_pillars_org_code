@@ -52,6 +52,7 @@ function [gk,tk,tk0] = estimate_gt(gamma,h,niter,lambda,beta_weight,tol,method,b
                 rhsf = fft2(rhs);
                 tkf = rhsf./(betasqr+lambda*abs(hf).^2+1e-8); %Added factor for stability
                 tk = ifft2(tkf);
+                
             case 'cg'
                 rhs = gk.*gamma + lambda*Hhg_comp(hf,gk);        
                 tk = cgs(@(x)A_comp(x,hf,lambda,beta_weight,gk,nrows,ncols),rhs(:),tol,20);
@@ -65,12 +66,13 @@ function [gk,tk,tk0] = estimate_gt(gamma,h,niter,lambda,beta_weight,tol,method,b
         %Make sure that our phase is not offsett
         gamma_phase = angle(tk);
         gamma_phase = gamma_phase - mean(mean(gamma_phase(bg.bgyy1:bg.bgyy2,bg.bgxx1:bg.bgxx2)));
+        gamma_phase = gamma_phase.*(gamma_phase>=0); %Enfore non-negative contrainst for the phase.
         tk = abs(tk).*exp(i*gamma_phase);
         figure(4);
         subplot(1,3,1);imagesc(angle(tk));colorbar;title(sprintf('Current estimation tk - iter #%d',iter));
         subplot(1,3,2);imagesc(angle(gk));colorbar;title(sprintf('Current estimation -gk iter #%d',iter));
-        subplot(1,3,3);imagesc(angle(gk2));colorbar;title(sprintf('Current estimation -gk iter #%d',iter));
-        
+        subplot(1,3,3);imagesc(angle(gamma));colorbar;title(sprintf('Original arg(gamma) iter #%d',iter));
+      
         colormap jet
         figure(3);
         plot(angle(tk(1200,:)));drawnow

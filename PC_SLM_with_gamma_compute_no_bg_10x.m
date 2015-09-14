@@ -22,10 +22,10 @@ gamma = exp(i*(uphi_denoised));
 inverse = 1;
 %bw_array = linspace(15,15,1);%Specify the bandwidth 
 
-bg.bgxx1 = 65;
-bg.bgxx2 = 391;
-bg.bgyy1 = 1678;
-bg.bgyy2 = 1831;
+bg.bgxx1 = 595;
+bg.bgxx2 = 725;
+bg.bgyy1 = 680;
+bg.bgyy2 = 797;
    
 if (inverse)
     %bw = 8;
@@ -41,7 +41,7 @@ if (inverse)
     lambda_weight =5;
     beta_weight=0;
     tol = 1e-4; %We don't need to find the best in each step since we will tweak 2 variables t and g at the same time
-    niter=35;
+    niter=1000;
     if (gpuDeviceCount()==0)
         gpu_compute_en = 0; %if there is no gpu, compute the result on cpu instead
     end
