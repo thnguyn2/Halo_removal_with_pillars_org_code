@@ -26,47 +26,27 @@ if (exist(strcat(fname,'coord.txt')))
         x2 = x2(yt:yb,xl:xr);
   end
 end
-a1=sqrt(x1);a2 = sqrt(x2)*2.3;
-beta=a1./a2;
+as=sqrt(x1);ao = sqrt(x2)*2.3;
+beta=as./ao;
 phi=atan2(beta.*sin(del_phi),1+beta.*cos(del_phi));
 figure(1);
 subplot(121);imagesc(phi);colormap gray;colorbar;title('Original phase delay');
 subplot(122);plot(phi(535,:));title('Profile before reconstruction');
 
-
-% uphi = -imread(strcat(fname,'.tif'));%The image is flipped in 10x dataset
-% nanidx= find(isnan(uphi)==1);
-% uphi(nanidx)=0;
-% figure(2)
-% imagesc(uphi);colorbar
-% axis image
-% axis off
-% writeTIFF(uphi,'SLIM image.tif');
-% 
-% load(strcat(fname,'_psf.mat'),'h_mask');
-% %%Added section for recovery....
-% [nrows,ncols]=size(uphi);
-% gamma_amp = ones(nrows,ncols);
-% %Filter the image to avoid very large value of the noise
-% h_denoise = fspecial('gaussian',[9 9],0.25);
-% uphi_denoised = imfilter(uphi,h_denoise,'same');
-% gamma = exp(i*(uphi_denoised));
-% inverse = 1;
-% %bw_array = linspace(15,15,1);%Specify the bandwidth 
-% 
-% bg.bgxx1 = 65;
-% bg.bgxx2 = 391;
-% bg.bgyy1 = 1678;
-% bg.bgyy2 = 1831;
-%    
-% if (inverse)
-%     h = h_mask;
-%     %h=fspecial('gaussian',[round(6*bw)+1 round(6*bw)+1],bw); %Transfer function of the low-pass filter...
-%     h1 = zeros(nrows,ncols);
-%     h1(1:size(h,1),1:size(h,2))=h;
-%     kernel_size=size(h,1);
-%     h1 = circshift(h1,[-round((kernel_size-1)/2) -round((kernel_size-1)/2)]);
-%     gpu_compute_en =0; %1-Enable GPU computing
+%Compute the gamma_o,s
+gamma_os = as.*ao.*exp(i*del_phi); %Us*conj(Uo)
+h_denoise = fspecial('gaussian',[9 9],0.25);
+phi_denoised = imfilter(phi,h_denoise,'same');
+[nrows,ncols]=size(phi);
+inverse = 1;
+bw = 10;
+if (inverse)
+      h=fspecial('gaussian',[round(6*bw)+1 round(6*bw)+1],bw); %Transfer function of the low-pass filter...
+      h1 = zeros(nrows,ncols);
+      h1(1:size(h,1),1:size(h,2))=h;
+      kernel_size=size(h,1);
+      h1 = circshift(h1,[-round((kernel_size-1)/2) -round((kernel_size-1)/2)]); 
+      gpu_compute_en =0; %1-Enable GPU computing
 %     %First, initialize tk and lk. Here, gk = t v h;
 %     lambda_weight =5;
 %     beta_weight=0;
@@ -87,4 +67,4 @@ subplot(122);plot(phi(535,:));title('Profile before reconstruction');
 %      end
 %      bgsubtract_str='_processed';
 %      writeTIFF(unwrap2(cast(angle(tk),'double')),strcat(fname,bgsubtract_str,'_.tif'))
-% end    
+end    
