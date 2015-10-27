@@ -1,5 +1,4 @@
-
-function [obj,term1,term2,term3,term4,term5] = objective_comp(gamma_os,l,f,g,params,ao2,as2)
+function [obj,term1,term2,term3,term4,term5] = fval(gamma_os,l,f,g,params,ao2,as2)
     %Compute the objective function
     %E=|gamma_os-conj(f).*gk|^2+lambda*|f-l*ho|^2+lambda*|g-l*hs|^2+...
     %beta*|ao2-conj(f).*(l*ho)|^2+ beta*|bo2-conj(g).*(l*hs)|^2

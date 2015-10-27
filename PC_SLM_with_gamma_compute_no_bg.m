@@ -126,21 +126,22 @@ if (inverse)
       num = f.*gamma_os+params.lambda*Hsl + params.beta*Hsl.*as2;
       den = abs(f).^2+params.lambda +params.beta*abs(Hsl).^2;
       g = num./den;
-      [obj,term1,term2,term3,term4,term5]=objective_comp(gamma_os,l,f,g,params,ao2,as2);
+      [obj,term1,term2,term3,term4,term5]=objective_comp(gamma_os,l,f,0,params,ao2,0);
       disp(['    Updating g: ' num2str(obj), ', #1: ' num2str(term1) ', #2: ' num2str(term2) ...
           ', #3: ' num2str(term3) ', #4: ' num2str(term4), ', #5: ' num2str(term5)]);
       
       %Update l given f and g
-      rhs = params.lambda*(params.Ho'*f + params.Hs'*g)+...
-            params.beta*(params.Ho'*(f.*ao2)+params.Hs'*(g.*as2));
-      f1 = params.lambda + params.beta*abs(f).^2;
-      g1 = params.lambda + params.beta*abs(g).^2;
-      l = cgs(@(x)A_comp(x,f1,g1,params,nrows,ncols),rhs(:),1e-5,5);
+      %rhs = params.lambda*(params.Ho'*f + params.Hs'*g)+...
+      %      params.beta*(params.Ho'*(f.*ao2)+params.Hs'*(g.*as2));
+      rhs = params.Ho'*(f.*ao2);
+    
+      l = cgs(@(x)A_comp(x,f,g,params,nrows,ncols),rhs(:),1e-5,1);
       l = reshape(l,[nrows ncols]);
-      [obj,term1,term2,term3,term4,term5]=objective_comp(gamma_os,l,f,g,params,ao2,as2);
+      [obj,term1,term2,term3,term4,term5]=objective_comp(gamma_os,l,f,0,params,ao2,0);
+      
       disp(['    Updating l: ' num2str(obj), ', #1: ' num2str(term1) ', #2: ' num2str(term2) ...
           ', #3: ' num2str(term3) ', #4: ' num2str(term4), ', #5: ' num2str(term5)]);
- 
+    
      
 %      maxbg_phase = 0.5;
 %      method = 'relax';
@@ -158,13 +159,12 @@ end
 end 
 
 
-function y=A_comp(x,f1,g1,params,nrows,ncols)
+function y=A_comp(x,f,g,params,nrows,ncols)
     %This function computes the results of the lhs (diag(gk.^2)+lambda*H^H*H)*x
       x=reshape(x,[nrows,ncols]);
-      HoX = params.Ho*x;
-      HsX = params.Hs*x;
-      HoX = f1.*HoX;
-      HsX = g1.*HsX;
-      y = params.Ho'*HoX+params.Hs'*HsX;
+      %y = params.Ho'*HoX+params.Hs'*HsX;
+      %y = params.Ho'*((params.lambda + params.beta*abs(f).^2).*(params.Ho*x));
+      y = params.Ho'*((abs(f).^2).*(params.Ho*x));%It is very important to have the correct () here since the first * is an operator
+      
       y = y(:);
 end
