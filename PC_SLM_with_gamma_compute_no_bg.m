@@ -1,3 +1,4 @@
+function demo
 clc;
 clear all;
 close all;
@@ -96,7 +97,7 @@ end
     params.Ho = H(Nx,hof,params.F); %Low-passed filtering operator
     params.Hs = H(Nx,hsf,params.F); 
     
-
+warning('off','all'); %Disable all warnings
 if (inverse)
       gpu_compute_en =0; %1-Enable GPU computing
       %Initialize our estimates
@@ -111,17 +112,35 @@ if (inverse)
       disp(['Current objective: ' num2str(obj), ', #1: ' num2str(term1) ', #2: ' num2str(term2) ...
           ', #3: ' num2str(term3) ', #4: ' num2str(term4), ', #5: ' num2str(term5)]);
 
+      %Update f given g and l
+      Hol = params.Ho*l;
+      num = g.*conj(gamma_os)+params.lambda*Hol+params.beta*Hol.*ao2;
+      den = abs(g).^2+params.lambda+params.beta*abs(Hol).^2;
+      f = num./den;
+      [obj,term1,term2,term3,term4,term5]=objective_comp(gamma_os,l,f,g,params,ao2,as2);
+      disp(['    Updating f: ' num2str(obj), ', #1: ' num2str(term1) ', #2: ' num2str(term2) ...
+          ', #3: ' num2str(term3) ', #4: ' num2str(term4), ', #5: ' num2str(term5)]);
+        
+      %Update g given f and l
+      Hsl = params.Hs*l;
+      num = f.*gamma_os+params.lambda*Hsl + params.beta*Hsl.*as2;
+      den = abs(f).^2+params.lambda +params.beta*abs(Hsl).^2;
+      g = num./den;
+      [obj,term1,term2,term3,term4,term5]=objective_comp(gamma_os,l,f,g,params,ao2,as2);
+      disp(['    Updating g: ' num2str(obj), ', #1: ' num2str(term1) ', #2: ' num2str(term2) ...
+          ', #3: ' num2str(term3) ', #4: ' num2str(term4), ', #5: ' num2str(term5)]);
       
-      
-%     %First, initialize tk and lk. Here, gk = t v h;
-%     lambda_weight =5;
-%     beta_weight=0;
-%     tol = 1e-4; %We don't need to find the best in each step since we will tweak 2 variables t and g at the same time
-%     niter=35;
-%     if (gpuDeviceCount()==0)
-%         gpu_compute_en = 0; %if there is no gpu, compute the result on cpu instead
-%     end
-% 
+      %Update l given f and g
+      rhs = params.lambda*(params.Ho'*f+params.Hs'*g)+params.beta*(params.Ho'*(f.*ao2)+params.Hs'*(g.*as2));
+      f1 = params.lambda + params.beta*abs(f).^2;
+      g1 = params.lambda + params.beta*abs(g).^2;
+      l = cgs(@(x)A_comp(x,f1,g1,params,nrows,ncols),rhs(:),1e-5,5);
+      l = reshape(l,[nrows ncols]);
+      [obj,term1,term2,term3,term4,term5]=objective_comp(gamma_os,l,f,g,params,ao2,as2);
+      disp(['    Updating l: ' num2str(obj), ', #1: ' num2str(term1) ', #2: ' num2str(term2) ...
+          ', #3: ' num2str(term3) ', #4: ' num2str(term4), ', #5: ' num2str(term5)]);
+ 
+     
 %      maxbg_phase = 0.5;
 %      method = 'relax';
 %      if (gpu_compute_en==0)
@@ -133,4 +152,18 @@ if (inverse)
 %      end
 %      bgsubtract_str='_processed';
 %      writeTIFF(unwrap2(cast(angle(tk),'double')),strcat(fname,bgsubtract_str,'_.tif'))
-end    
+
+end
+end 
+
+
+function y=A_comp(x,f1,g1,params,nrows,ncols)
+    %This function computes the results of the lhs (diag(gk.^2)+lambda*H^H*H)*x
+      x=reshape(x,[nrows,ncols]);
+      HoX = params.Ho*x;
+      HsX = params.Hs*x;
+      HoX = f1.*HoX;
+      HsX = g1.*HsX;
+      y = params.Ho'*HoX+params.Hs'*HsX;
+      y = y(:);
+end
