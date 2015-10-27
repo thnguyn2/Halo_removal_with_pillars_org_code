@@ -89,7 +89,7 @@ end
 
     %Parameter definitions
     params.niter =50; %Number of iterations needed
-    params.lambda = 1;
+    params.lambda = 0;
     params.beta = 1;
     params.method = 'relax';%Choose between 'relax'/'cg'/'nlcf'
     %Operator definitions
@@ -131,7 +131,8 @@ if (inverse)
           ', #3: ' num2str(term3) ', #4: ' num2str(term4), ', #5: ' num2str(term5)]);
       
       %Update l given f and g
-      rhs = params.lambda*(params.Ho'*f+params.Hs'*g)+params.beta*(params.Ho'*(f.*ao2)+params.Hs'*(g.*as2));
+      rhs = params.lambda*(params.Ho'*f + params.Hs'*g)+...
+            params.beta*(params.Ho'*(f.*ao2)+params.Hs'*(g.*as2));
       f1 = params.lambda + params.beta*abs(f).^2;
       g1 = params.lambda + params.beta*abs(g).^2;
       l = cgs(@(x)A_comp(x,f1,g1,params,nrows,ncols),rhs(:),1e-5,5);

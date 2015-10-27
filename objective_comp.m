@@ -10,12 +10,12 @@ function [obj,term1,term2,term3,term4,term5] = objective_comp(gamma_os,l,f,g,par
     Hsl = params.Hs*l;
     evect2=f-Hol;
     term2 = norm(evect2(:),'fro').^2;
-    evect3=f-Hsl;
+    evect3=g-Hsl;
     term3 = norm(evect3(:),'fro').^2;
     evect4=ao2-conj(f).*Hol;
     term4 = norm(evect4(:),'fro').^2;
     evect5=as2-conj(g).*Hsl;
     term5 = norm(evect5(:),'fro').^2;
-    obj = term1 + params.lambda*(term2+term2)+params.beta*(term4+term5);
+    obj = term1 + params.lambda*(term2+term3)+params.beta*(term4+term5);
     
 end
