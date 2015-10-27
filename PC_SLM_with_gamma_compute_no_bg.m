@@ -30,13 +30,13 @@ as=sqrt(x1);ao = sqrt(x2)*2.3;
 beta=as./ao;
 phi=atan2(beta.*sin(del_phi),1+beta.*cos(del_phi));
 
-%Compute the gamma_o,s
-gamma_os = as.*ao.*exp(i*del_phi); %Us*conj(Uo)
-h_denoise = fspecial('gaussian',[9 9],0.25);
-phi_denoised = imfilter(phi,h_denoise,'same');
 [nrows,ncols]=size(phi);
-%Crop the image to make it squared
-phi = phi((nrows-ncols)/2:(nrows+ncols)/2-1,1:ncols);
+%Crop the images to make it squared
+phi = phi(round((nrows-ncols)/2):round((nrows+ncols)/2)-1,1:ncols);
+ao = ao(round((nrows-ncols)/2):round((nrows+ncols)/2)-1,1:ncols);
+as = as(round((nrows-ncols)/2):round((nrows+ncols)/2)-1,1:ncols);
+del_phi = del_phi(round((nrows-ncols)/2):round((nrows+ncols)/2)-1,1:ncols);
+
 [nrows,ncols]=size(phi);
 Nx=min(nrows,ncols); %Dimension for Performing the Fourier transform
 figure(1);
@@ -90,9 +90,7 @@ end
     params.niter =50; %Number of iterations needed
     params.lambda = 1;
     params.beta = 1;
-    params.tol = 1e-5; %Tolerance for the solver to stop
     params.method = 'relax';%Choose between 'relax'/'cg'/'nlcf'
-    params.smart_init_en = 1;
     %Operator definitions
     params.F = FFT2(Nx); %Fourier transform operator
     params.Ho = H(Nx,hof,params.F); %Low-passed filtering operator
@@ -100,14 +98,20 @@ end
     
 
 if (inverse)
-      h=fspecial('gaussian',[round(6*bw)+1 round(6*bw)+1],bw); %Transfer function of the low-pass filter...
-      h1 = zeros(nrows,ncols);
-      h1(1:size(h,1),1:size(h,2))=h;
-      kernel_size=size(h,1);
-      h1 = circshift(h1,[-round((kernel_size-1)/2) -round((kernel_size-1)/2)]); 
       gpu_compute_en =0; %1-Enable GPU computing
+      %Initialize our estimates
+      l = ao+as.*exp(1j*del_phi); %total field estimation
+      f = ao;
+      g = as.*exp(1j*del_phi);
+      %Compute the gamma_o,s
+      gamma_os = as.*ao.*exp(i*del_phi); %Us*conj(Uo)
+      ao2 = ao.^2;
+      as2 = as.^2;
+      [obj,term1,term2,term3,term4,term5]=objective_comp(gamma_os,l,f,g,params,ao2,as2);
+      disp(['Current objective: ' num2str(obj), ', #1: ' num2str(term1) ', #2: ' num2str(term2) ...
+          ', #3: ' num2str(term3) ', #4: ' num2str(term4), ', #5: ' num2str(term5)]);
+
       
-      %Generating the opeators
       
 %     %First, initialize tk and lk. Here, gk = t v h;
 %     lambda_weight =5;
