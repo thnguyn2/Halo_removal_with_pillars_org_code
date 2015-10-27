@@ -29,17 +29,76 @@ end
 as=sqrt(x1);ao = sqrt(x2)*2.3;
 beta=as./ao;
 phi=atan2(beta.*sin(del_phi),1+beta.*cos(del_phi));
-figure(1);
-subplot(121);imagesc(phi);colormap gray;colorbar;title('Original phase delay');
-subplot(122);plot(phi(535,:));title('Profile before reconstruction');
 
 %Compute the gamma_o,s
 gamma_os = as.*ao.*exp(i*del_phi); %Us*conj(Uo)
 h_denoise = fspecial('gaussian',[9 9],0.25);
 phi_denoised = imfilter(phi,h_denoise,'same');
 [nrows,ncols]=size(phi);
+%Crop the image to make it squared
+phi = phi((nrows-ncols)/2:(nrows+ncols)/2-1,1:ncols);
+[nrows,ncols]=size(phi);
+Nx=min(nrows,ncols); %Dimension for Performing the Fourier transform
+figure(1);
+subplot(131);imagesc(phi);colormap gray;colorbar;title('Original phase map');
+subplot(132);plot(phi(end/2,:));title('Profile before reconstruction');
+
 inverse = 1;
-bw = 10;
+%Step 2: create the correlation kernel
+htype = 'gaussian';
+
+%Bandwidth of the objective function
+obj_bw = 90; 
+[x,y]=meshgrid(linspace(-ncols/2,ncols/2-1,ncols),linspace(-nrows/2,nrows/2-1,nrows));
+obj_mask = sqrt(x.^2+y.^2)<obj_bw; %
+tf = fftshift(obj_mask); 
+phif = fft2(phi);
+phi_denoised = ifft2(phif.*tf);
+subplot(133);imagesc(phi_denoised);colormap gray;colorbar;title('Denoised phase map');
+
+%This is the TF for all the spatial frequency
+switch (htype)
+    case {'gaussian'} %A gaussian filter
+                    bw = 20; %Bandwidth parameter
+                    h=fspecial('gaussian',[round(4*bw)+1 round(4*bw)+1],bw); %Transfer function of the low-pass filter...
+                    %Fourier transform the filter
+                    h1 = zeros(nrows,ncols);
+                    h1(1:size(h,1),1:size(h,2))=h;
+                    kernel_size=size(h,1);
+                    h1 = circshift(h1,[-round((kernel_size-1)/2) -round((kernel_size-1)/2)]);
+                    hof = cast(tf,'double').*fft2(h1);
+                    hsf = cast(tf,'double').*(ones(size(hof))-hof);
+    case {'lp'} %Bandpass filter
+                    lp_bw = 20;%Bandwidth of the low pass filter in the frequency domain. The smaller it is, the more coherent the field will be 
+                    hf = zeros(nrows,ncols);
+                    mask = sqrt(x.^2+y.^2)<lp_bw; %
+                    hf(mask)=1;
+                    hof = fftshift(hf);
+    case {'measured'} %Measured kernel - Not tested yet.
+                    load(strcat('Pillars_data/',filename,'_psf.mat'),'h_mask');
+                    h = h_mask;
+                    h1 = zeros(nrows,ncols);
+                    h1(1:size(h,1),1:size(h,2))=h;
+                    kernel_size=size(h,1);
+                    h1 = circshift(h1,[-round((kernel_size-1)/2) -round((kernel_size-1)/2)]);
+                    hof = fft2(h1);
+                    %Normalize the kernel
+                    hof = hof/max(abs(hof(:)));
+end
+
+    %Parameter definitions
+    params.niter =50; %Number of iterations needed
+    params.lambda = 1;
+    params.beta = 1;
+    params.tol = 1e-5; %Tolerance for the solver to stop
+    params.method = 'relax';%Choose between 'relax'/'cg'/'nlcf'
+    params.smart_init_en = 1;
+    %Operator definitions
+    params.F = FFT2(Nx); %Fourier transform operator
+    params.Ho = H(Nx,hof,params.F); %Low-passed filtering operator
+    params.Hs = H(Nx,hsf,params.F); 
+    
+
 if (inverse)
       h=fspecial('gaussian',[round(6*bw)+1 round(6*bw)+1],bw); %Transfer function of the low-pass filter...
       h1 = zeros(nrows,ncols);
@@ -47,6 +106,9 @@ if (inverse)
       kernel_size=size(h,1);
       h1 = circshift(h1,[-round((kernel_size-1)/2) -round((kernel_size-1)/2)]); 
       gpu_compute_en =0; %1-Enable GPU computing
+      
+      %Generating the opeators
+      
 %     %First, initialize tk and lk. Here, gk = t v h;
 %     lambda_weight =5;
 %     beta_weight=0;
