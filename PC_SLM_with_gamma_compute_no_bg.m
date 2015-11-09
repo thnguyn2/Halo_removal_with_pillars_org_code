@@ -90,7 +90,7 @@ end
 %Parameter definitions
 params.niter =50; %Number of iterations needed
 params.lambda = 1;
-params.beta = 1;
+params.beta = 5;
 params.method = 'relax';%Choose between 'relax'/'cg'/'nlcf'
 %Operator definitions
 params.F = FFT2(Nx); %Fourier transform operator
@@ -111,7 +111,7 @@ if (inverse)
     [obj,term1,term2,term3,term4,term5]=objective_comp(gamma_os,l,f,g,params,ao2,as2);
     disp(['Current objective: ' num2str(obj), ', #1: ' num2str(term1) ', #2: ' num2str(term2) ...
         ', #3: ' num2str(term3) ', #4: ' num2str(term4), ', #5: ' num2str(term5)]);
-    for iteridx = 1:50
+    for iteridx = 1:200
         %Update f given g and l
         Hol = params.Ho*l;
         num = g.*conj(gamma_os)+params.lambda*Hol+params.beta*Hol.*ao2;
